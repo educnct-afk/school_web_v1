@@ -14,13 +14,19 @@ export function useDepartmentsViewModel() {
   });
 
   const create = useMutation({
-    mutationFn: (payload) => departmentService.create({ ...payload, organizationId: orgId }),
+    mutationFn: (payload) => {
+      const cleaned = Object.fromEntries(Object.entries(payload).filter(([, v]) => v !== ''));
+      return departmentService.create({ ...cleaned, organizationId: orgId });
+    },
     onSuccess: () => { toast.success('Department created'); qc.invalidateQueries({ queryKey: ['academic', 'departments'] }); },
     onError: (e) => toast.error(e.message),
   });
 
   const update = useMutation({
-    mutationFn: ({ id, payload }) => departmentService.update(id, payload),
+    mutationFn: ({ id, payload }) => {
+      const cleaned = Object.fromEntries(Object.entries(payload).filter(([, v]) => v !== ''));
+      return departmentService.update(id, cleaned);
+    },
     onSuccess: () => { toast.success('Department updated'); qc.invalidateQueries({ queryKey: ['academic', 'departments'] }); },
     onError: (e) => toast.error(e.message),
   });

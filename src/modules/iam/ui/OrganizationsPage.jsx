@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { Building2, Plus, Trash2, Pencil } from 'lucide-react';
 import Card, { CardHeader } from '@core/ui/Card';
 import DataTable from '@core/ui/DataTable';
@@ -7,6 +8,8 @@ import Button from '@core/ui/Button';
 import Input from '@core/ui/Input';
 import Modal from '@core/ui/Modal';
 import Badge from '@core/ui/Badge';
+import { SkeletonTable } from '@core/ui/Skeleton';
+import { useConfirm } from '@core/ui/ConfirmDialog';
 import { useOrganizationsViewModel } from '../viewmodels/useOrganizationsViewModel';
 import { hasPermission } from '@core/auth/hasPermission';
 import { useAuthStore } from '@core/stores/authStore';
@@ -14,6 +17,7 @@ import { useAuthStore } from '@core/stores/authStore';
 export default function OrganizationsPage() {
   const { list, create, update, remove } = useOrganizationsViewModel();
   const permissions = useAuthStore((s) => s.permissions);
+  const confirm = useConfirm();
 
   const [openCreate, setOpenCreate] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -23,6 +27,16 @@ export default function OrganizationsPage() {
   const canDelete = hasPermission(permissions, 'iam:organizations:delete');
 
   const rows = list.data ?? [];
+
+  async function handleDelete(r) {
+    const ok = await confirm({
+      title: 'Delete organization?',
+      description: `"${r.name}" and all its data will be permanently removed.`,
+      confirmLabel: 'Delete',
+      tone: 'danger',
+    });
+    if (ok) remove.mutate(r.id);
+  }
 
   return (
     <div className="space-y-4">
@@ -37,7 +51,7 @@ export default function OrganizationsPage() {
           }
         />
 
-        {list.isLoading && <p className="text-sm text-ink-500">Loading…</p>}
+        {list.isLoading && <SkeletonTable rows={4} cols={3} />}
         {list.data && rows.length === 0 && (
           <EmptyState icon={Building2} title="No organizations" description="Create the first organization." />
         )}
@@ -68,9 +82,7 @@ export default function OrganizationsPage() {
                       </Button>
                     )}
                     {canDelete && (
-                      <Button variant="ghost" className="!p-2" aria-label="Delete" onClick={() => {
-                        if (confirm(`Delete organization ${r.name}?`)) remove.mutate(r.id);
-                      }}>
+                      <Button variant="ghost" className="!p-2" aria-label="Delete" onClick={() => handleDelete(r)}>
                         <Trash2 size={16} />
                       </Button>
                     )}
@@ -103,22 +115,19 @@ export default function OrganizationsPage() {
 }
 
 function OrgFormModal({ open, title, initial, onClose, onSubmit, loading }) {
-  const [form, setForm] = useState({
-    name: '', slug: '', contactEmail: '', contactPhone: '', address: '',
+  const { register, handleSubmit, reset, formState: { errors } } = useForm({
+    defaultValues: { name: '', slug: '', contactEmail: '', contactPhone: '', address: '' },
   });
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   useEffect(() => {
-    if (open) {
-      setForm({
-        name: initial?.name ?? '',
-        slug: initial?.slug ?? '',
-        contactEmail: initial?.contactEmail ?? '',
-        contactPhone: initial?.contactPhone ?? '',
-        address: initial?.address ?? '',
-      });
-    }
-  }, [open, initial]);
+    if (open) reset({
+      name: initial?.name ?? '',
+      slug: initial?.slug ?? '',
+      contactEmail: initial?.contactEmail ?? '',
+      contactPhone: initial?.contactPhone ?? '',
+      address: initial?.address ?? '',
+    });
+  }, [open, initial, reset]);
 
   return (
     <Modal
@@ -128,16 +137,24 @@ function OrgFormModal({ open, title, initial, onClose, onSubmit, loading }) {
       footer={
         <>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={() => onSubmit(form)} loading={loading}>Save</Button>
+          <Button onClick={handleSubmit(onSubmit)} loading={loading}>Save</Button>
         </>
       }
     >
-      <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); onSubmit(form); }}>
-        <Input label="Name" required value={form.name} onChange={set('name')} />
-        <Input label="Slug" required value={form.slug} onChange={set('slug')} />
-        <Input label="Contact email" type="email" value={form.contactEmail} onChange={set('contactEmail')} />
-        <Input label="Contact phone" value={form.contactPhone} onChange={set('contactPhone')} />
-        <Input label="Address" value={form.address} onChange={set('address')} />
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <Input
+          label="Name"
+          error={errors.name?.message}
+          {...register('name', { required: 'Name is required' })}
+        />
+        <Input
+          label="Slug"
+          error={errors.slug?.message}
+          {...register('slug', { required: 'Slug is required' })}
+        />
+        <Input label="Contact email" type="email" {...register('contactEmail')} />
+        <Input label="Contact phone" {...register('contactPhone')} />
+        <Input label="Address" {...register('address')} />
       </form>
     </Modal>
   );

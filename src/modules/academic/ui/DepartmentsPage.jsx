@@ -1,4 +1,4 @@
-import { Building, Plus, Trash2 } from 'lucide-react';
+import { Building, Plus, Trash2, Pencil } from 'lucide-react';
 import Card, { CardHeader } from '@core/ui/Card';
 import DataTable from '@core/ui/DataTable';
 import EmptyState from '@core/ui/EmptyState';
@@ -7,13 +7,16 @@ import Input from '@core/ui/Input';
 import Modal from '@core/ui/Modal';
 import { useState } from 'react';
 import { useDepartmentsViewModel } from '../viewmodels/useDepartmentsViewModel';
+import { useStaffViewModel } from '../viewmodels/useStaffViewModel';
 import { hasPermission } from '@core/auth/hasPermission';
 import { useAuthStore } from '@core/stores/authStore';
 
 export default function DepartmentsPage() {
-  const { list, create, remove } = useDepartmentsViewModel();
+  const { list, create, update, remove } = useDepartmentsViewModel();
+  const { list: staffList } = useStaffViewModel();
   const permissions = useAuthStore((s) => s.permissions);
   const [openCreate, setOpenCreate] = useState(false);
+  const [editing, setEditing] = useState(null);
 
   const canCreate = hasPermission(permissions, 'academic:departments:create');
   const canDelete = hasPermission(permissions, 'academic:departments:delete');
@@ -45,13 +48,18 @@ export default function DepartmentsPage() {
             },
             {
               key: 'actions', header: '',
-              render: (r) => canDelete ? (
-                <div className="flex justify-end">
-                  <Button variant="ghost" className="!p-2" onClick={() => { if (confirm(`Delete ${r.name}?`)) remove.mutate(r.id); }}>
-                    <Trash2 size={16} />
+              render: (r) => (
+                <div className="flex justify-end gap-1">
+                  <Button variant="ghost" className="!p-2" onClick={() => setEditing(r)}>
+                    <Pencil size={16} />
                   </Button>
+                  {canDelete && (
+                    <Button variant="ghost" className="!p-2" onClick={() => { if (confirm(`Delete ${r.name}?`)) remove.mutate(r.id); }}>
+                      <Trash2 size={16} />
+                    </Button>
+                  )}
                 </div>
-              ) : null,
+              ),
             },
           ]} />
         )}
@@ -62,12 +70,53 @@ export default function DepartmentsPage() {
         onClose={() => setOpenCreate(false)}
         onSubmit={(payload) => create.mutate(payload, { onSuccess: () => setOpenCreate(false) })}
         loading={create.isPending}
+        staff={staffList.data ?? []}
+      />
+      <EditDepartmentModal
+        department={editing}
+        onClose={() => setEditing(null)}
+        onSubmit={(payload) => update.mutate({ id: editing.id, payload }, { onSuccess: () => setEditing(null) })}
+        loading={update.isPending}
+        staff={staffList.data ?? []}
       />
     </div>
   );
 }
 
-function CreateDepartmentModal({ open, onClose, onSubmit, loading }) {
+function EditDepartmentModal({ department, onClose, onSubmit, loading, staff }) {
+  const [form, setForm] = useState({ name: '', headUserId: '' });
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const prevDept = useState(null);
+  if (department && prevDept[0] !== department) {
+    prevDept[1](department);
+    form.name = department.name ?? '';
+    form.headUserId = department.headOfDepartment?.id ?? '';
+  }
+
+  return (
+    <Modal open={!!department} onClose={onClose} title={`Edit ${department?.name ?? 'department'}`}
+      footer={<><Button variant="outline" onClick={onClose}>Cancel</Button><Button onClick={() => onSubmit(form)} loading={loading}>Save</Button></>}
+    >
+      <form className="space-y-4">
+        <Input label="Name" required value={form.name} onChange={set('name')} />
+        <label className="block">
+          <span className="mb-1.5 block text-sm font-medium">Head of department (optional)</span>
+          <select className="input" value={form.headUserId} onChange={set('headUserId')}>
+            <option value="">None</option>
+            {staff.map((s) => (
+              <option key={s.userId} value={s.userId}>
+                {s.user?.firstName} {s.user?.lastName}
+              </option>
+            ))}
+          </select>
+        </label>
+      </form>
+    </Modal>
+  );
+}
+
+function CreateDepartmentModal({ open, onClose, onSubmit, loading, staff }) {
   const [form, setForm] = useState({ name: '', headUserId: '' });
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -77,7 +126,17 @@ function CreateDepartmentModal({ open, onClose, onSubmit, loading }) {
     >
       <form className="space-y-4">
         <Input label="Name" required value={form.name} onChange={set('name')} />
-        <Input label="Head user ID (optional)" value={form.headUserId} onChange={set('headUserId')} />
+        <label className="block">
+          <span className="mb-1.5 block text-sm font-medium">Head of department (optional)</span>
+          <select className="input" value={form.headUserId} onChange={set('headUserId')}>
+            <option value="">None</option>
+            {staff.map((s) => (
+              <option key={s.userId} value={s.userId}>
+                {s.user?.firstName} {s.user?.lastName}
+              </option>
+            ))}
+          </select>
+        </label>
       </form>
     </Modal>
   );

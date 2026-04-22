@@ -14,8 +14,20 @@ export function useStaffViewModel() {
   });
 
   const create = useMutation({
-    mutationFn: (payload) => staffService.create({ ...payload, organizationId: orgId }),
+    mutationFn: (payload) => {
+      const cleaned = Object.fromEntries(Object.entries(payload).filter(([, v]) => v !== ''));
+      return staffService.create({ ...cleaned, organizationId: orgId });
+    },
     onSuccess: () => { toast.success('Staff created'); qc.invalidateQueries({ queryKey: ['academic', 'staff'] }); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const update = useMutation({
+    mutationFn: ({ userId, payload }) => {
+      const cleaned = Object.fromEntries(Object.entries(payload).filter(([, v]) => v !== ''));
+      return staffService.update(userId, cleaned);
+    },
+    onSuccess: () => { toast.success('Staff updated'); qc.invalidateQueries({ queryKey: ['academic', 'staff'] }); },
     onError: (e) => toast.error(e.message),
   });
 
@@ -25,5 +37,5 @@ export function useStaffViewModel() {
     onError: (e) => toast.error(e.message),
   });
 
-  return { list, create, remove, orgId };
+  return { list, create, update, remove, orgId };
 }

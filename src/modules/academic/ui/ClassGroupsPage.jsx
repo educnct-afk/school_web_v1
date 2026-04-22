@@ -8,11 +8,13 @@ import Modal from '@core/ui/Modal';
 import Badge from '@core/ui/Badge';
 import { useState } from 'react';
 import { useClassGroupsViewModel } from '../viewmodels/useClassGroupsViewModel';
+import { useAcademicYearsViewModel } from '../viewmodels/useAcademicYearsViewModel';
 import { hasPermission } from '@core/auth/hasPermission';
 import { useAuthStore } from '@core/stores/authStore';
 
 export default function ClassGroupsPage() {
   const { list, create, remove } = useClassGroupsViewModel();
+  const { list: yearsList } = useAcademicYearsViewModel();
   const permissions = useAuthStore((s) => s.permissions);
   const [openCreate, setOpenCreate] = useState(false);
 
@@ -61,22 +63,33 @@ export default function ClassGroupsPage() {
         onClose={() => setOpenCreate(false)}
         onSubmit={(payload) => create.mutate(payload, { onSuccess: () => setOpenCreate(false) })}
         loading={create.isPending}
+        academicYears={yearsList.data ?? []}
       />
     </div>
   );
 }
 
-function CreateClassGroupModal({ open, onClose, onSubmit, loading }) {
-  const [form, setForm] = useState({ name: '', academicYearId: '', gradeLevel: '', section: '', capacity: '' });
+function CreateClassGroupModal({ open, onClose, onSubmit, loading, academicYears }) {
+  const [form, setForm] = useState({ academicYearId: '', gradeLevel: '', section: '', capacity: '' });
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const handleSubmit = () => {
+    const parts = [form.gradeLevel && `Grade ${form.gradeLevel}`, form.section && `Section ${form.section}`].filter(Boolean);
+    onSubmit({ ...form, name: parts.join(' - ') });
+  };
 
   return (
     <Modal open={open} onClose={onClose} title="Create class group"
-      footer={<><Button variant="outline" onClick={onClose}>Cancel</Button><Button onClick={() => onSubmit(form)} loading={loading}>Create</Button></>}
+      footer={<><Button variant="outline" onClick={onClose}>Cancel</Button><Button onClick={handleSubmit} loading={loading}>Create</Button></>}
     >
       <form className="space-y-4">
-        <Input label="Name" required value={form.name} onChange={set('name')} placeholder="e.g. Grade 5 - Section A" />
-        <Input label="Academic year ID" required value={form.academicYearId} onChange={set('academicYearId')} />
+        <label className="block">
+          <span className="mb-1.5 block text-sm font-medium">Academic year <span className="text-red-500">*</span></span>
+          <select className="input" required value={form.academicYearId} onChange={set('academicYearId')}>
+            <option value="">Select academic year…</option>
+            {academicYears.map((y) => <option key={y.id} value={y.id}>{y.name}</option>)}
+          </select>
+        </label>
         <div className="grid grid-cols-2 gap-3">
           <Input label="Grade level" value={form.gradeLevel} onChange={set('gradeLevel')} placeholder="e.g. 5" />
           <Input label="Section" value={form.section} onChange={set('section')} placeholder="e.g. A" />

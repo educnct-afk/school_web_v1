@@ -14,13 +14,19 @@ export function useSubjectsViewModel() {
   });
 
   const create = useMutation({
-    mutationFn: (payload) => subjectService.create({ ...payload, organizationId: orgId }),
+    mutationFn: (payload) => {
+      const cleaned = Object.fromEntries(Object.entries(payload).filter(([, v]) => v !== ''));
+      return subjectService.create({ ...cleaned, organizationId: orgId });
+    },
     onSuccess: () => { toast.success('Subject created'); qc.invalidateQueries({ queryKey: ['academic', 'subjects'] }); },
     onError: (e) => toast.error(e.message),
   });
 
   const update = useMutation({
-    mutationFn: ({ id, payload }) => subjectService.update(id, payload),
+    mutationFn: ({ id, payload }) => {
+      const cleaned = Object.fromEntries(Object.entries(payload).filter(([, v]) => v !== ''));
+      return subjectService.update(id, cleaned);
+    },
     onSuccess: () => { toast.success('Subject updated'); qc.invalidateQueries({ queryKey: ['academic', 'subjects'] }); },
     onError: (e) => toast.error(e.message),
   });

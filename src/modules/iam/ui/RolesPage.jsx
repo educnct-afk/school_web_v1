@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { ShieldCheck, Plus, Trash2, KeyRound, Pencil } from 'lucide-react';
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { ShieldCheck, Plus, Trash2, KeyRound, Pencil, GraduationCap, UserCheck, Users } from 'lucide-react';
 import Card, { CardHeader } from '@core/ui/Card';
 import DataTable from '@core/ui/DataTable';
 import EmptyState from '@core/ui/EmptyState';
@@ -7,14 +8,18 @@ import Button from '@core/ui/Button';
 import Input from '@core/ui/Input';
 import Modal from '@core/ui/Modal';
 import Badge from '@core/ui/Badge';
+import { SkeletonTable } from '@core/ui/Skeleton';
+import { useConfirm } from '@core/ui/ConfirmDialog';
 import { useRolesViewModel, useRolePermissionsViewModel } from '../viewmodels/useRolesViewModel';
 import { usePermissionsViewModel } from '../viewmodels/usePermissionsViewModel';
 import { hasPermission } from '@core/auth/hasPermission';
 import { useAuthStore } from '@core/stores/authStore';
+import { useState } from 'react';
 
 export default function RolesPage() {
   const { list, create, update, remove } = useRolesViewModel();
   const permissions = useAuthStore((s) => s.permissions);
+  const confirm = useConfirm();
 
   const [openCreate, setOpenCreate] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -26,6 +31,16 @@ export default function RolesPage() {
 
   const rows = list.data ?? [];
 
+  async function handleDelete(r) {
+    const ok = await confirm({
+      title: 'Delete role?',
+      description: `"${r.displayName}" will be removed. Users assigned this role will lose access.`,
+      confirmLabel: 'Delete',
+      tone: 'danger',
+    });
+    if (ok) remove.mutate(r.id);
+  }
+
   return (
     <div className="space-y-4">
       <Card>
@@ -34,14 +49,12 @@ export default function RolesPage() {
           subtitle="Collections of permissions assignable to users."
           actions={
             canCreate ? (
-              <Button onClick={() => setOpenCreate(true)}>
-                <Plus size={16} /> New role
-              </Button>
+              <Button onClick={() => setOpenCreate(true)}><Plus size={16} /> New role</Button>
             ) : null
           }
         />
 
-        {list.isLoading && <p className="text-sm text-ink-500">Loading…</p>}
+        {list.isLoading && <SkeletonTable rows={4} cols={3} />}
         {list.data && rows.length === 0 && (
           <EmptyState icon={ShieldCheck} title="No roles" description="Create your first role to control access." />
         )}
@@ -55,10 +68,16 @@ export default function RolesPage() {
                 key: 'name', header: 'Role',
                 render: (r) => (
                   <div className="min-w-0">
-                    <p className="font-medium truncate">{r.displayName}</p>
+                    <p className="font-medium truncate">{r.displayName || r.name}</p>
                     <p className="text-xs text-ink-500 truncate">{r.slug}</p>
                   </div>
                 ),
+              },
+              {
+                key: 'archetype', header: 'Archetype',
+                render: (r) => r.archetype
+                  ? <ArchetypeBadge value={r.archetype} />
+                  : <span className="text-xs text-ink-500">—</span>,
               },
               {
                 key: 'system', header: 'Type',
@@ -78,9 +97,7 @@ export default function RolesPage() {
                       </Button>
                     )}
                     {canDelete && !r.isSystemRole && (
-                      <Button variant="ghost" className="!p-2" aria-label="Delete" onClick={() => {
-                        if (confirm(`Delete role ${r.displayName}?`)) remove.mutate(r.id);
-                      }}>
+                      <Button variant="ghost" className="!p-2" aria-label="Delete" onClick={() => handleDelete(r)}>
                         <Trash2 size={16} />
                       </Button>
                     )}
@@ -95,6 +112,7 @@ export default function RolesPage() {
       <RoleFormModal
         open={openCreate}
         title="Create role"
+        mode="create"
         onClose={() => setOpenCreate(false)}
         onSubmit={(payload) => create.mutate(payload, { onSuccess: () => setOpenCreate(false) })}
         loading={create.isPending}
@@ -103,39 +121,39 @@ export default function RolesPage() {
       <RoleFormModal
         open={!!editing}
         title="Edit role"
+        mode="edit"
         initial={editing}
         onClose={() => setEditing(null)}
-        onSubmit={(payload) => update.mutate({ id: editing.id, payload }, { onSuccess: () => setEditing(null) })}
+        onSubmit={(payload) => update.mutate(
+          { id: editing.id, payload: { ...editing, ...payload } },
+          { onSuccess: () => setEditing(null) },
+        )}
         loading={update.isPending}
       />
 
-      {managing && (
-        <ManagePermissionsModal role={managing} onClose={() => setManaging(null)} />
-      )}
+      {managing && <ManagePermissionsModal role={managing} onClose={() => setManaging(null)} />}
     </div>
   );
 }
 
-function RoleFormModal({ open, title, initial, onClose, onSubmit, loading }) {
-  const [form, setForm] = useState({
-    slug: '', displayName: '', description: '', icon: '',
+function RoleFormModal({ open, title, mode, initial, onClose, onSubmit, loading }) {
+  const isCreate = mode === 'create';
+  const { register, handleSubmit, reset, formState: { errors } } = useForm({
+    defaultValues: { name: '', description: '', archetype: '' },
   });
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   useEffect(() => {
-    if (open) {
-      setForm({
-        slug: initial?.slug ?? '',
-        displayName: initial?.displayName ?? '',
-        description: initial?.description ?? '',
-        icon: initial?.icon ?? '',
-      });
-    }
-  }, [open, initial]);
+    if (open) reset({
+      name: initial?.name ?? '',
+      description: initial?.description ?? '',
+      archetype: initial?.archetype ?? '',
+    });
+  }, [open, initial, reset]);
 
-  const submit = (e) => {
-    e.preventDefault();
-    onSubmit(form);
+  const submit = (values) => {
+    const payload = { name: values.name, description: values.description };
+    if (isCreate) payload.archetype = values.archetype;
+    onSubmit(payload);
   };
 
   return (
@@ -146,17 +164,55 @@ function RoleFormModal({ open, title, initial, onClose, onSubmit, loading }) {
       footer={
         <>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={submit} loading={loading}>Save</Button>
+          <Button onClick={handleSubmit(submit)} loading={loading}>Save</Button>
         </>
       }
     >
-      <form onSubmit={submit} className="space-y-4">
-        <Input label="Slug" required value={form.slug} onChange={set('slug')} hint="Lowercase identifier, e.g. teacher" />
-        <Input label="Display name" required value={form.displayName} onChange={set('displayName')} />
-        <Input label="Icon" value={form.icon} onChange={set('icon')} hint="Lucide icon name for UI" />
-        <Input label="Description" value={form.description} onChange={set('description')} />
+      <form onSubmit={handleSubmit(submit)} className="space-y-4">
+        <Input
+          label="Name"
+          hint="e.g. Teacher, Sub-admin. A URL-safe slug is derived automatically."
+          error={errors.name?.message}
+          {...register('name', { required: 'Name is required' })}
+        />
+        {isCreate && (
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium">Archetype</span>
+            <select
+              className={`input ${errors.archetype ? 'border-red-500 focus:ring-red-500/30 focus:border-red-500' : ''}`}
+              {...register('archetype', { required: 'Pick an archetype' })}
+            >
+              <option value="">Select…</option>
+              <option value="STUDENT">Student</option>
+              <option value="STAFF">Staff</option>
+              <option value="GUARDIAN">Guardian</option>
+            </select>
+            <span className="mt-1.5 block text-xs text-ink-500">
+              Which satellite profile this role's users get. Cannot be changed later.
+            </span>
+            {errors.archetype && <span className="mt-1.5 block text-xs text-red-600 dark:text-red-400">{errors.archetype.message}</span>}
+          </label>
+        )}
+        <Input label="Description" {...register('description')} />
       </form>
     </Modal>
+  );
+}
+
+const ARCHETYPE_META = {
+  STUDENT:  { label: 'Student',  icon: GraduationCap, tone: 'brand' },
+  STAFF:    { label: 'Staff',    icon: UserCheck,     tone: 'success' },
+  GUARDIAN: { label: 'Guardian', icon: Users,         tone: 'warn' },
+};
+
+function ArchetypeBadge({ value }) {
+  const meta = ARCHETYPE_META[value];
+  if (!meta) return <Badge tone="neutral">{value}</Badge>;
+  const Icon = meta.icon;
+  return (
+    <Badge tone={meta.tone}>
+      <Icon size={12} className="mr-1" /> {meta.label}
+    </Badge>
   );
 }
 
@@ -176,7 +232,19 @@ function ManagePermissionsModal({ role, onClose }) {
       title={`Permissions · ${role.displayName}`}
       footer={<Button variant="outline" onClick={onClose}>Done</Button>}
     >
-      {(roleList.isLoading || allList.isLoading) && <p className="text-sm text-ink-500">Loading…</p>}
+      {(roleList.isLoading || allList.isLoading) && (
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="flex justify-between items-center py-2">
+              <div className="space-y-1.5 flex-1 mr-4">
+                <div className="skeleton h-4 w-48" />
+                <div className="skeleton h-3 w-64" />
+              </div>
+              <div className="skeleton h-8 w-16 rounded-xl" />
+            </div>
+          ))}
+        </div>
+      )}
       {allList.data && (
         <ul className="divide-y divide-ink-100 dark:divide-white/5">
           {allList.data.map((p) => {
@@ -187,7 +255,7 @@ function ManagePermissionsModal({ role, onClose }) {
                   <p className="font-medium text-sm truncate">{p.module}:{p.resource}:{p.action}</p>
                   {p.description && <p className="text-xs text-ink-500 truncate">{p.description}</p>}
                 </div>
-                {canGrant && (
+                {canGrant ? (
                   <Button
                     variant={on ? 'outline' : 'primary'}
                     onClick={() => (on ? revoke.mutate(p.id) : grant.mutate(p.id))}
@@ -195,8 +263,9 @@ function ManagePermissionsModal({ role, onClose }) {
                   >
                     {on ? 'Revoke' : 'Grant'}
                   </Button>
+                ) : (
+                  <Badge tone={on ? 'success' : 'neutral'}>{on ? 'Granted' : '—'}</Badge>
                 )}
-                {!canGrant && <Badge tone={on ? 'success' : 'neutral'}>{on ? 'Granted' : '—'}</Badge>}
               </li>
             );
           })}

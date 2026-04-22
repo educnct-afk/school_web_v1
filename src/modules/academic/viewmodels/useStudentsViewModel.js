@@ -14,13 +14,19 @@ export function useStudentsViewModel() {
   });
 
   const create = useMutation({
-    mutationFn: (payload) => studentService.create({ ...payload, organizationId: orgId }),
+    mutationFn: (payload) => {
+      const cleaned = Object.fromEntries(Object.entries(payload).filter(([, v]) => v !== ''));
+      return studentService.create({ ...cleaned, organizationId: orgId });
+    },
     onSuccess: () => { toast.success('Student created'); qc.invalidateQueries({ queryKey: ['academic', 'students'] }); },
     onError: (e) => toast.error(e.message),
   });
 
   const update = useMutation({
-    mutationFn: ({ userId, payload }) => studentService.update(userId, payload),
+    mutationFn: ({ userId, payload }) => {
+      const cleaned = Object.fromEntries(Object.entries(payload).filter(([, v]) => v !== ''));
+      return studentService.update(userId, cleaned);
+    },
     onSuccess: () => { toast.success('Student updated'); qc.invalidateQueries({ queryKey: ['academic', 'students'] }); },
     onError: (e) => toast.error(e.message),
   });

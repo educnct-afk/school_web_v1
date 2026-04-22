@@ -7,11 +7,13 @@ import Input from '@core/ui/Input';
 import Modal from '@core/ui/Modal';
 import { useState } from 'react';
 import { useSubjectsViewModel } from '../viewmodels/useSubjectsViewModel';
+import { useDepartmentsViewModel } from '../viewmodels/useDepartmentsViewModel';
 import { hasPermission } from '@core/auth/hasPermission';
 import { useAuthStore } from '@core/stores/authStore';
 
 export default function SubjectsPage() {
   const { list, create, remove } = useSubjectsViewModel();
+  const { list: deptList } = useDepartmentsViewModel();
   const permissions = useAuthStore((s) => s.permissions);
   const [openCreate, setOpenCreate] = useState(false);
 
@@ -58,12 +60,13 @@ export default function SubjectsPage() {
         onClose={() => setOpenCreate(false)}
         onSubmit={(payload) => create.mutate(payload, { onSuccess: () => setOpenCreate(false) })}
         loading={create.isPending}
+        departments={deptList.data ?? []}
       />
     </div>
   );
 }
 
-function CreateSubjectModal({ open, onClose, onSubmit, loading }) {
+function CreateSubjectModal({ open, onClose, onSubmit, loading, departments }) {
   const [form, setForm] = useState({ name: '', code: '', description: '', departmentId: '' });
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -75,7 +78,13 @@ function CreateSubjectModal({ open, onClose, onSubmit, loading }) {
         <Input label="Name" required value={form.name} onChange={set('name')} />
         <Input label="Code" value={form.code} onChange={set('code')} placeholder="e.g. MATH101" />
         <Input label="Description" value={form.description} onChange={set('description')} />
-        <Input label="Department ID (optional)" value={form.departmentId} onChange={set('departmentId')} />
+        <label className="block">
+          <span className="mb-1.5 block text-sm font-medium">Department (optional)</span>
+          <select className="input" value={form.departmentId} onChange={set('departmentId')}>
+            <option value="">None</option>
+            {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+          </select>
+        </label>
       </form>
     </Modal>
   );
