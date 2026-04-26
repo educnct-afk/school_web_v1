@@ -7,6 +7,8 @@ import HomePage from '@core/ui/pages/HomePage';
 import { authRoutes } from '@modules/auth';
 import { iamRoutes } from '@modules/iam';
 import { academicRoutes } from '@modules/academic';
+import { scheduleRoutes } from '@modules/schedule';
+import { examsRoutes } from '@modules/exams';
 
 export default function AppRouter() {
   return (
@@ -23,6 +25,8 @@ export default function AppRouter() {
         <Route path="/" element={<HomePage />} />
         {iamRoutes}
         {academicRoutes}
+        {scheduleRoutes}
+        {examsRoutes}
       </Route>
 
       <Route path="/403" element={<ForbiddenPage />} />

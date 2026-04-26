@@ -47,4 +47,13 @@ export const FEATURES = {
     STAFF: 'staff',
     GUARDIANS: 'guardians',
   },
+  SCHEDULE: {
+    TIMETABLE: 'timetable',
+    ATTENDANCE: 'attendance',
+  },
+  EXAMS: {
+    EXAM_SCHEDULES: 'exam-schedules',
+    GRADES: 'grades',
+    REPORT_CARDS: 'report-cards',
+  },
 };

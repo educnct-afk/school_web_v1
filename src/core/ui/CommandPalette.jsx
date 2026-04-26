@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Search, CornerDownLeft } from 'lucide-react';
 import clsx from 'clsx';
@@ -79,7 +80,7 @@ export default function CommandPalette() {
         <span className="hidden lg:inline ml-auto pl-6 text-[10px] font-mono text-ink-500 border border-ink-300/60 dark:border-white/10 rounded px-1.5 py-0.5">⌘K</span>
       </button>
 
-      {open && (
+      {open && createPortal(
         <div className="fixed inset-0 z-50 grid place-items-start pt-[10vh]">
           <div className="absolute inset-0 bg-ink-900/50 backdrop-blur-sm animate-fadeIn" onClick={() => setOpen(false)} />
           <div className="relative w-full max-w-lg mx-4 bg-white dark:bg-ink-800 rounded-xl2 shadow-pop animate-fadeIn overflow-hidden">
@@ -115,7 +116,8 @@ export default function CommandPalette() {
               ))}
             </ul>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx vite *)",
+      "Bash(./gradlew build *)",
+      "Edit(/.claude/skills/create-module/**)",
+      "Read(//Users/dev/.claude/skills/create-module/reference/**)",
+      "Bash(./gradlew compileJava --console=plain)"
+    ]
+  }
+}

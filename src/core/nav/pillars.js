@@ -2,6 +2,8 @@ import {
   Home, Users, Shield, Key, Building2, ClipboardList,
   GraduationCap, BookOpen, LayoutGrid, DoorOpen,
   CalendarDays, Building, UserCheck, UsersRound,
+  CalendarRange, ClipboardCheck,
+  ScrollText, CalendarClock, Award, FileText,
 } from 'lucide-react';
 import { FEATURES, isFeatureEnabled } from '@core/features/featureFlags';
 import { hasAny } from '@core/auth/hasPermission';
@@ -34,6 +36,25 @@ export const PILLARS = [
       { to: '/departments',    label: 'Departments',    icon: Building,     module: 'ACADEMIC', feature: FEATURES.ACADEMIC.DEPARTMENTS,    perms: ['academic:departments:read'] },
       { to: '/academic-years', label: 'Academic Years', icon: CalendarDays, module: 'ACADEMIC', feature: FEATURES.ACADEMIC.ACADEMIC_YEARS, perms: ['academic:academic-years:read'] },
       { to: '/classrooms',     label: 'Classrooms',     icon: DoorOpen,     module: 'ACADEMIC', feature: FEATURES.ACADEMIC.CLASSROOMS,     perms: ['academic:classrooms:read'] },
+    ],
+  },
+  {
+    id: 'schedule',
+    label: 'Schedule',
+    icon: CalendarRange,
+    items: [
+      { to: '/timetable',  label: 'Timetable',  icon: CalendarRange,   module: 'SCHEDULE', feature: FEATURES.SCHEDULE.TIMETABLE,  perms: ['schedule:timetable:read'] },
+      { to: '/attendance', label: 'Attendance', icon: ClipboardCheck,  module: 'SCHEDULE', feature: FEATURES.SCHEDULE.ATTENDANCE, perms: ['schedule:attendance:read'] },
+    ],
+  },
+  {
+    id: 'exams',
+    label: 'Exams',
+    icon: ScrollText,
+    items: [
+      { to: '/exam-schedules', label: 'Exam schedules', icon: CalendarClock, module: 'EXAMS', feature: FEATURES.EXAMS.EXAM_SCHEDULES, perms: ['exams:exam-schedules:read'] },
+      { to: '/grades',         label: 'Grades',         icon: Award,         module: 'EXAMS', feature: FEATURES.EXAMS.GRADES,         perms: ['exams:grades:read'] },
+      { to: '/report-cards',   label: 'Report cards',   icon: FileText,      module: 'EXAMS', feature: FEATURES.EXAMS.REPORT_CARDS,   perms: ['exams:report-cards:read'] },
     ],
   },
   {
