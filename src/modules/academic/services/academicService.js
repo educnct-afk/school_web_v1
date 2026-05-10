@@ -33,6 +33,7 @@ export const termService = {
 export const classGroupService = {
   byOrg: (orgId) => api.get(`/api/class-groups/org/${orgId}`).then(unwrap),
   byAcademicYear: (academicYearId) => api.get(`/api/class-groups/academic-year/${academicYearId}`).then(unwrap),
+  byClassTeacher: (userId) => api.get(`/api/class-groups/class-teacher/${userId}`).then(unwrap),
   byId: (id) => api.get(`/api/class-groups/${id}`).then(unwrap),
   create: (payload) => api.post('/api/class-groups', payload).then(unwrap),
   update: (id, payload) => api.put(`/api/class-groups/${id}`, payload).then(unwrap),

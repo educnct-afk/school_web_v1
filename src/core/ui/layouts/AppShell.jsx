@@ -7,6 +7,7 @@ import { getVisiblePillars, getActivePillar } from '@core/nav/pillars';
 import Breadcrumbs from '@core/ui/Breadcrumbs';
 import CommandPalette from '@core/ui/CommandPalette';
 import UserMenu from '@core/ui/UserMenu';
+import ImpersonationBanner from '@core/ui/ImpersonationBanner';
 
 export default function AppShell() {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -28,6 +29,7 @@ export default function AppShell() {
 
   return (
     <div className="min-h-screen bg-ink-100/40 dark:bg-ink-900">
+      <ImpersonationBanner />
       {/* Desktop: rail + (optional) sub-panel + content */}
       <div className="hidden md:flex min-h-screen">
         <Rail pillars={pillars} activeId={activePillar?.id} onSelect={onPillarClick} />

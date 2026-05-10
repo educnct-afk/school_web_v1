@@ -9,6 +9,7 @@ import { iamRoutes } from '@modules/iam';
 import { academicRoutes } from '@modules/academic';
 import { scheduleRoutes } from '@modules/schedule';
 import { examsRoutes } from '@modules/exams';
+import { studiesRoutes } from '@modules/studies';
 
 export default function AppRouter() {
   return (
@@ -27,6 +28,7 @@ export default function AppRouter() {
         {academicRoutes}
         {scheduleRoutes}
         {examsRoutes}
+        {studiesRoutes}
       </Route>
 
       <Route path="/403" element={<ForbiddenPage />} />

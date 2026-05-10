@@ -13,6 +13,14 @@ export const authService = {
     const res = await api.get('/api/auth/me');
     return unwrap(res); // { id, email, firstName, lastName, role, organization, permissions }
   },
+  async impersonate(userId) {
+    const res = await api.post(`/api/auth/impersonate/${userId}`);
+    return unwrap(res); // { token, user, organization, impersonatorEmail }
+  },
+  async stopImpersonation() {
+    const res = await api.post('/api/auth/impersonate/stop');
+    return unwrap(res);
+  },
   async requestPasswordReset({ userId, tokenHash, expiresAt }) {
     const res = await api.post('/api/password-resets', { userId, tokenHash, expiresAt });
     return unwrap(res);

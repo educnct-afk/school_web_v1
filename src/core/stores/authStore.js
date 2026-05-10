@@ -31,11 +31,27 @@ const _initial = (() => {
       user: stored.user ?? null,
       organization: stored.organization ?? null,
       permissions: stored.permissions ?? [],
+      original: stored.original ?? null,
+      impersonatorEmail: stored.impersonatorEmail ?? null,
       hydrated: true,
     };
   }
-  return { token: null, user: null, organization: null, permissions: [], hydrated: true };
+  return {
+    token: null, user: null, organization: null, permissions: [],
+    original: null, impersonatorEmail: null, hydrated: true,
+  };
 })();
+
+function persist(state) {
+  writeStoredAuth({
+    token: state.token,
+    user: state.user,
+    organization: state.organization,
+    permissions: state.permissions,
+    original: state.original,
+    impersonatorEmail: state.impersonatorEmail,
+  });
+}
 
 export const useAuthStore = create((set, get) => ({
   ..._initial,
@@ -52,8 +68,11 @@ export const useAuthStore = create((set, get) => ({
       user: user ?? null,
       organization: organization ?? null,
       permissions: permissions ?? [],
+      // A fresh login wipes any prior impersonation context.
+      original: null,
+      impersonatorEmail: null,
     };
-    writeStoredAuth(next);
+    persist(next);
     set({ ...next, hydrated: true });
   },
 
@@ -64,13 +83,56 @@ export const useAuthStore = create((set, get) => ({
       user: user ?? state.user,
       organization: organization ?? state.organization,
       permissions: permissions ?? state.permissions,
+      original: state.original,
+      impersonatorEmail: state.impersonatorEmail,
     };
-    writeStoredAuth(next);
+    persist(next);
+    set(next);
+  },
+
+  // Stash current admin auth into `original` and swap to the impersonation token.
+  // Permissions for the target are populated by a follow-up /api/auth/me call.
+  startImpersonation: ({ token, user, organization, impersonatorEmail }) => {
+    const state = get();
+    if (state.original) return; // server-side also blocks nested impersonation
+    const next = {
+      token,
+      user: user ?? null,
+      organization: organization ?? null,
+      permissions: [],
+      original: {
+        token: state.token,
+        user: state.user,
+        organization: state.organization,
+        permissions: state.permissions,
+      },
+      impersonatorEmail: impersonatorEmail ?? null,
+    };
+    persist(next);
+    set(next);
+  },
+
+  // Restore the saved admin auth and clear impersonation state.
+  stopImpersonationLocal: () => {
+    const state = get();
+    if (!state.original) return;
+    const next = {
+      token: state.original.token,
+      user: state.original.user,
+      organization: state.original.organization,
+      permissions: state.original.permissions,
+      original: null,
+      impersonatorEmail: null,
+    };
+    persist(next);
     set(next);
   },
 
   logoutLocal: () => {
     writeStoredAuth(null);
-    set({ token: null, user: null, organization: null, permissions: [] });
+    set({
+      token: null, user: null, organization: null, permissions: [],
+      original: null, impersonatorEmail: null,
+    });
   },
 }));

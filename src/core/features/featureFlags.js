@@ -56,4 +56,10 @@ export const FEATURES = {
     GRADES: 'grades',
     REPORT_CARDS: 'report-cards',
   },
+  STUDIES: {
+    WORKSPACE: 'workspace',
+    SUBJECT: 'subject',
+    MOCK_TEST: 'mock-test',
+    TEACHER_CONTENT: 'teacher-content',
+  },
 };

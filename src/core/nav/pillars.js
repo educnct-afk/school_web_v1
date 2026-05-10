@@ -58,6 +58,15 @@ export const PILLARS = [
     ],
   },
   {
+    id: 'workspace',
+    label: 'My Workspace',
+    icon: LayoutGrid,
+    items: [
+      { to: '/workspace',       label: 'Workspace',   icon: BookOpen,     module: 'STUDIES', feature: FEATURES.STUDIES.WORKSPACE,       perms: ['studies:workspace:read'] },
+      { to: '/teacher/classes', label: 'My Classes',  icon: GraduationCap, module: 'STUDIES', feature: FEATURES.STUDIES.TEACHER_CONTENT, perms: ['studies:teacher-content:read'] },
+    ],
+  },
+  {
     id: 'admin',
     label: 'Admin',
     icon: Shield,
@@ -76,8 +85,17 @@ function itemVisible(item, permissions) {
   return true;
 }
 
-export function getVisiblePillars(permissions) {
+/**
+ * Pillar IDs that archetyped users (STAFF / STUDENT) get to see. Everything else
+ * is consumed via the workspace hub, so the admin pillars would just be noise —
+ * even when those users have read perms on individual resources to power the hub.
+ */
+const WORKSPACE_AUDIENCE_PILLARS = new Set(['home', 'workspace']);
+
+export function getVisiblePillars(permissions, archetype) {
+  const isWorkspaceAudience = archetype === 'STAFF' || archetype === 'STUDENT';
   return PILLARS
+    .filter((p) => !isWorkspaceAudience || WORKSPACE_AUDIENCE_PILLARS.has(p.id))
     .map((p) => p.standalone ? p : { ...p, items: p.items.filter((i) => itemVisible(i, permissions)) })
     .filter((p) => p.standalone || p.items.length > 0);
 }

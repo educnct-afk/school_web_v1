@@ -20,8 +20,13 @@ api.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
     if (status === 401) {
-      const { token, logoutLocal } = useAuthStore.getState();
-      if (token) logoutLocal();
+      const { token, original, stopImpersonationLocal, logoutLocal } = useAuthStore.getState();
+      if (token) {
+        // If the impersonation token expired, drop back to the admin session
+        // instead of nuking everything.
+        if (original) stopImpersonationLocal();
+        else logoutLocal();
+      }
     }
     return Promise.reject(normalizeError(error));
   }

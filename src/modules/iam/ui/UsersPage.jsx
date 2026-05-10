@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Users as UsersIcon, Plus, Trash2, Shield } from 'lucide-react';
+import { Users as UsersIcon, Plus, Trash2, Shield, LogIn } from 'lucide-react';
 import Card, { CardHeader } from '@core/ui/Card';
 import DataTable from '@core/ui/DataTable';
 import EmptyState from '@core/ui/EmptyState';
@@ -17,9 +17,11 @@ import { hasPermission } from '@core/auth/hasPermission';
 import { useAuthStore } from '@core/stores/authStore';
 
 export default function UsersPage() {
-  const { list, create, changeRole, remove } = useUsersViewModel();
+  const { list, create, changeRole, remove, impersonate } = useUsersViewModel();
   const { list: rolesList } = useRolesViewModel();
   const permissions = useAuthStore((s) => s.permissions);
+  const currentUserId = useAuthStore((s) => s.user?.id);
+  const isImpersonating = useAuthStore((s) => !!s.original);
   const confirm = useConfirm();
 
   const [openCreate, setOpenCreate] = useState(false);
@@ -28,6 +30,16 @@ export default function UsersPage() {
   const canCreate = hasPermission(permissions, 'iam:users:create');
   const canDelete = hasPermission(permissions, 'iam:users:delete');
   const canUpdate = hasPermission(permissions, 'iam:users:update');
+  const canImpersonate = hasPermission(permissions, 'iam:users:impersonate') && !isImpersonating;
+
+  async function handleImpersonate(row) {
+    const ok = await confirm({
+      title: 'Sign in as this user?',
+      description: `You will see the app as ${row.email}. Use the banner at the top to return to your admin session.`,
+      confirmLabel: 'Sign in as',
+    });
+    if (ok) impersonate.mutate(row.id);
+  }
 
   const rows = list.data ?? [];
 
@@ -99,6 +111,17 @@ export default function UsersPage() {
                 key: 'actions', header: '',
                 render: (r) => (
                   <div className="flex items-center gap-1 justify-end">
+                    {canImpersonate && r.id !== currentUserId && r.isActive && (
+                      <Button
+                        variant="ghost"
+                        className="!p-2"
+                        aria-label="Sign in as"
+                        title="Sign in as"
+                        onClick={() => handleImpersonate(r)}
+                      >
+                        <LogIn size={16} />
+                      </Button>
+                    )}
                     {canUpdate && (
                       <Button variant="ghost" className="!p-2" aria-label="Change role" onClick={() => setOpenRole(r)}>
                         <Shield size={16} />
