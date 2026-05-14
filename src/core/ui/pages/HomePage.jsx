@@ -4,7 +4,7 @@ import Badge from '@core/ui/Badge';
 import {
   Users, Shield, Key, Building2, ClipboardList, UserCircle
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { isFeatureEnabled, FEATURES } from '@core/features/featureFlags';
 import { hasAny } from '@core/auth/hasPermission';
 
@@ -21,6 +21,14 @@ export default function HomePage() {
   const user = useAuthStore((s) => s.user);
   const permissions = useAuthStore((s) => s.permissions);
   const organization = useAuthStore((s) => s.organization);
+
+  // STAFF and STUDENT land on the workspace hub instead of the admin home —
+  // the workspace is their day-to-day surface; pillars give them deeper access
+  // to individual modules when they need it.
+  const archetype = user?.role?.archetype;
+  if (archetype === 'STAFF' || archetype === 'STUDENT') {
+    return <Navigate to="/workspace" replace />;
+  }
 
   const visible = TILES.filter((t) =>
     isFeatureEnabled('IAM', t.feature) && (!t.perms.length || hasAny(permissions, t.perms))
